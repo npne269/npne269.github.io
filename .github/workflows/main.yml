@@ -1,0 +1,54 @@
+name: Web Release
+
+on:
+  push:
+    branches:  [ "main" ]
+
+  pull_request:
+    branches: [ "main" ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Create Web Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Start Web Release Build
+        run: flutter build web --release
+     
+      - name: Upload Web Build Files
+        uses: actions/upload-artifact@v2
+        with:
+          name: web-release
+          path: ./build/web
+
+  deploy:
+    name: Deploy Web Build
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Web Release
+      uses: actions/download-artifact@v2
+      with:
+        name: web-release
+
+    - name: Deploy to gh-pages
+      uses: subosito/flutter-action@v2
+      with:
+        github_token: release
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "release build"
+          git push origin release
